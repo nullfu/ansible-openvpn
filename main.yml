@@ -1,0 +1,90 @@
+---
+
+- hosts: myhost
+
+  handlers:
+  - include: handlers/main.yml
+
+  vars:
+  - openvpn_etcdir: "/etc/openvpn"
+  - openvpn_keydir: "{{openvpn_etcdir}}/keys"
+  - ansible_ssh_user: deploy
+  - ansible_become_user: root
+  - ansible_become_method: sudo
+  - ansible_become: yes
+
+  tasks:
+
+    - name: Change timezone to GB
+      command: cp /usr/share/zoneinfo/GB /etc/localtime
+
+    - name: Install epel
+      yum: name=epel-release
+    
+    - name: Install OpenVPN
+      yum: pkg={{ item }} state=latest
+      with_items:
+            - openvpn
+            - easy-rsa
+            - ntp
+    
+    - name: Enable services
+      service: name={{item}} enabled=yes
+      with_items: [openvpn, ntpd]
+
+    - name: Start NTP
+      service: name=ntpd state=restarted 
+    
+    - name: Copy easy-rsa files
+      command: cp -R /usr/share/easy-rsa/2.0/ {{openvpn_etcdir}}/easy-rsa/
+
+    - name: Copy buildserver and serverconfig
+      template: src=files/{{item}} dest={{openvpn_etcdir}}/{{item}} mode=0700
+      with_items: [build-server.sh, server.conf, client1.ovpn, client-merge.sh]
+    
+    - name: Copy vars
+      template: src=files/{{item}} dest={{openvpn_etcdir}}/easy-rsa/{{item}} mode=0700
+      with_items: [vars]
+   
+    - name: Setup openvpn using buildscript
+      command: /etc/openvpn/build-server.sh
+
+    - name: Smush client vpn config file into ovpn
+      command: /etc/openvpn/client-merge.sh
+
+# Not supported until v2.2
+#    - name: iptables >> flush nat
+#      iptables: table=nat flush=yes
+#      tags: iptables
+#
+#    - name: iptables >> flush filter
+#      iptables: flush=yes
+#      tags: iptables
+
+# unfortunatley iptables rules will keep just getting inserted, I am running ansible 2.1 so don't have the features to append rules or set policy
+
+    - name: iptables >> nat for clients
+      iptables: table=nat chain=POSTROUTING source=10.13.38.0/24 jump=MASQUERADE
+      tags: iptables
+
+    - name: iptable >> enable SSH 22/tcp
+      iptables: chain=INPUT destination_port=22 protocol=tcp jump=ACCEPT
+      tags: iptables
+
+    - name: iptables >> enabled VPN port udp/17601
+      iptables: chain=INPUT destination_port=17601 protocol=udp jump=ACCEPT
+      tags: iptables
+
+    - name: iptables >> DROP everything else
+      iptables: chain=INPUT jump=DROP
+      tags: iptables
+
+    - name: Save iptables
+      command: /etc/init.d/iptables save
+
+    - name: Set ip forwarding in the sysctl file and reload if necessary
+      sysctl: name="net.ipv4.ip_forward" value=1 sysctl_set=yes state=present reload=yes
+      ignore_errors: yes
+
+    - name: openvpn >> Service - start
+      service: name=openvpn state=restarted
