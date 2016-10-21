@@ -1,6 +1,6 @@
 # OpenVPN Ansible Deployment
 
-**Note: Incomplete, only currently designed as a _run once_ solution.**
+**Note: The build script generates openvpn server and client, it will do so _every_ time you run it.**
 
 ### Requirements:
 
