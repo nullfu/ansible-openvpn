@@ -14,10 +14,10 @@
       command: cp /usr/share/zoneinfo/GB /etc/localtime
 
     - name: Install epel
-      yum: name=epel-release
+      yum: name=epel-release state=present
     
     - name: Install OpenVPN
-      yum: pkg={{ item }} state=latest
+      yum: pkg={{ item }} state=present
       with_items:
             - openvpn
             - easy-rsa
@@ -35,7 +35,7 @@
 
     - name: Copy buildserver and serverconfig
       template: src=files/{{item}} dest={{openvpn_etcdir}}/{{item}} mode=0700
-      with_items: [build-server.sh, server.conf, client1.ovpn, client-merge.sh]
+      with_items: [server.conf, client1.ovpn, client-merge.sh]
     
     - name: Copy vars
       template: src=files/{{item}} dest={{openvpn_etcdir}}/easy-rsa/{{item}} mode=0700
