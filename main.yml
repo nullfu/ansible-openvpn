@@ -5,13 +5,8 @@
   handlers:
   - include: handlers/main.yml
 
-  vars:
-  - openvpn_etcdir: "/etc/openvpn"
-  - openvpn_keydir: "{{openvpn_etcdir}}/keys"
-  - ansible_ssh_user: deploy
-  - ansible_become_user: root
-  - ansible_become_method: sudo
-  - ansible_become: yes
+  vars_files:
+  - defaults/main.yml
 
   tasks:
 
