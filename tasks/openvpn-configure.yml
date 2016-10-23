@@ -1,0 +1,16 @@
+---
+
+- name: OpenVPN >> Configure >> Clean All
+  shell: cd /etc/openvpn/easy-rsa && source ./vars && ./clean-all
+
+- name: OpenVPN >> Configure >> Create DH
+  shell: cd /etc/openvpn/easy-rsa && source ./vars && ./build-dh
+
+- name: OpenVPN >> Configure >> Create CA Cert
+  shell: cd /etc/openvpn/easy-rsa && source ./vars && ./pkitool --initca
+
+- name: OpenVPN >> Configure >> Create Server Cert
+  shell: cd /etc/openvpn/easy-rsa && source ./vars && ./pkitool --server server
+
+- name: OpenVPN >> Configure >> Create Client Cert
+  shell: cd /etc/openvpn/easy-rsa && source ./vars && ./pkitool client1
